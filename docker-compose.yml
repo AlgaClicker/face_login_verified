@@ -1,0 +1,86 @@
+
+networks:
+  network:
+    driver: bridge
+    
+volumes:
+  known_faces:
+  pg-data:
+  redis-data:
+
+services:
+  face-api:
+    container_name: face-api
+    image: registry.dev.it59com.ru/face/face-api:latest
+    build:
+      context: ./face_api
+    ports:
+      - "5000:5000"
+    volumes:
+      - known_faces:/root/.deepface
+      - ./known_faces:/app/known_faces
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - network      
+    expose:
+      - "5000" 
+
+
+  frontend:
+    container_name: frontend
+    image: registry.dev.it59com.ru/face/frontend:latest
+    build:
+      context: ./frontend
+    volumes:
+      - ./frontend:/app:rw
+    links:
+      - face-api      
+    ports:
+      - "8080:8080"   
+    networks:
+      - network     
+    expose:
+      - "8080" 
+
+  api:
+    container_name: api
+    image: registry.dev.it59com.ru/face/api:latest
+    build:
+      context: ./back_api
+    links:
+      - face-api      
+    ports:
+      - "8001:8001"   
+    networks:
+      - network     
+    expose:
+      - "8001" 
+#  postgres:
+#    hostname: postgres
+#    image: postgres:17.5-alpine3.21
+#    restart: always
+#    volumes:
+#      - pg-data:/var/lib/postgresql/data:cached
+#    networks:
+#      - network
+
+  redis:
+    hostname: redis
+    image: redis:latest
+    restart: always
+    command: redis-server
+    volumes:
+      - redis-data:/data:cached
+    networks:
+      - network
+    expose:
+      - "6379"      
+#    runtime: nvidia
+#    restart: unless-stopped
+
+# gpu-check:
+#    image: nvidia/cuda:11.8.0-runtime-ubi8
+#    container_name: gpu-check
+#    command: ["nvidia-smi"]
+#    runtime: nvidia
